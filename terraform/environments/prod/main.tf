@@ -93,7 +93,6 @@ module "compute" {
   redis_port            = module.data.redis_port
   media_bucket_id       = module.storage.media_bucket_id
   sqs_queue_url         = local.sqs_queue_url
-  acm_certificate_arn   = var.acm_certificate_arn
   cpu                   = var.ecs_cpu
   memory                = var.ecs_memory
   desired_count         = var.ecs_desired_count

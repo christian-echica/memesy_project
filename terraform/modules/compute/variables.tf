@@ -15,7 +15,6 @@ variable "redis_endpoint"         { type = string }
 variable "redis_port"             { type = number }
 variable "media_bucket_id"        { type = string }
 variable "sqs_queue_url"          { type = string }
-variable "acm_certificate_arn"    { type = string }
 
 variable "cpu" {
   type    = number

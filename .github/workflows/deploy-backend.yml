@@ -1,0 +1,115 @@
+name: Deploy Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to deploy
+        required: true
+        default: main
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - production
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  # ── ECS Fargate microservices ──────────────────────────────────────────────
+  ecs:
+    name: Deploy ECS (${{ matrix.service }}) → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        service: [listing, order, payment]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push
+        env:
+          IMAGE: ${{ env.ECR_REGISTRY }}/memesy-${{ inputs.environment }}/${{ matrix.service }}
+          SHA: ${{ github.sha }}
+        run: |
+          docker build \
+            -f backend/${{ matrix.service }}/Dockerfile \
+            -t $IMAGE:$SHA \
+            -t $IMAGE:latest \
+            backend/
+          docker push $IMAGE:$SHA
+          docker push $IMAGE:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
+            --service memesy-${{ inputs.environment }}-${{ matrix.service }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+  # ── Lambda ─────────────────────────────────────────────────────────────────
+  lambda:
+    name: Deploy Lambda → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install deps into package dir
+        run: |
+          pip install \
+            -r backend/lambda/requirements.txt \
+            --target backend/lambda/package \
+            --platform manylinux2014_x86_64 \
+            --only-binary=:all:
+
+      - name: Zip package
+        run: |
+          cp backend/lambda/handler.py backend/lambda/package/
+          cd backend/lambda/package
+          zip -r ../../../purchase-handler.zip .
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp purchase-handler.zip \
+            s3://${{ secrets.LAMBDA_PACKAGE_BUCKET }}/purchase-handler/latest.zip
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name memesy-${{ inputs.environment }}-purchase-handler \
+            --s3-bucket ${{ secrets.LAMBDA_PACKAGE_BUCKET }} \
+            --s3-key purchase-handler/latest.zip \
+            --region ${{ env.AWS_REGION }}

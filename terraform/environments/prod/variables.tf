@@ -69,10 +69,6 @@ variable "ecs_memory" {
   default = 1024
 }
 
-variable "acm_certificate_arn" {
-  type        = string
-  description = "ACM certificate ARN for the ALB HTTPS listener (must be in us-east-1)"
-}
 
 # ── Events & Messaging ────────────────────────────────────────────────────────
 

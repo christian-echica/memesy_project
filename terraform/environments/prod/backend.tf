@@ -4,16 +4,14 @@ terraform {
     key            = "prod/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "memesy-tfstate-lock"
+    use_lockfile   = true
   }
 }
 
-# Bootstrap the state bucket and DynamoDB lock table once before first apply:
+# Bootstrap the state bucket once before first init (use_lockfile stores lock in S3 — no DynamoDB needed):
 #   aws s3api create-bucket --bucket memesy-tfstate-prod --region us-east-1
 #   aws s3api put-bucket-versioning --bucket memesy-tfstate-prod --versioning-configuration Status=Enabled
+#   aws s3api put-public-access-block --bucket memesy-tfstate-prod \
+#     --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 #   aws s3api put-bucket-encryption --bucket memesy-tfstate-prod \
 #     --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-#   aws dynamodb create-table --table-name memesy-tfstate-lock \
-#     --attribute-definitions AttributeName=LockID,AttributeType=S \
-#     --key-schema AttributeName=LockID,KeyType=HASH \
-#     --billing-mode PAY_PER_REQUEST --region us-east-1
