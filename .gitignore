@@ -1,0 +1,37 @@
+# Added by code-review-graph
+.code-review-graph/
+
+# ── Secrets & credentials ─────────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ── Terraform ─────────────────────────────────────────────────────────────────
+# tfvars can contain account IDs, ARNs, real domain names — never commit prod values
+terraform/environments/*/terraform.tfvars
+terraform/environments/*/*.tfvars
+# Terraform state holds plaintext secrets (db passwords, etc.)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# ── MCP / Claude tooling ──────────────────────────────────────────────────────
+# .mcp.json may hold cloud credentials; .claude/ holds internal agent memory
+.mcp.json
+.claude/
+
+# ── Runtime / build artefacts ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+node_modules/
+*.log
+
+# ── Office lock files ─────────────────────────────────────────────────────────
+.~lock.*

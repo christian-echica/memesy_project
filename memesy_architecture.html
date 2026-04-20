@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memesy — Production Architecture</title>
+  <style>
+    :root {
+      --aws-orange: #FF9900;
+      --aws-dark: #232F3E;
+      --aws-blue: #1A73E8;
+      --layer-bg: #F8F9FA;
+      --border: #DEE2E6;
+      --text: #212529;
+      --sub: #6C757D;
+      --green: #28A745;
+      --purple: #6F42C1;
+      --teal: #17A2B8;
+      --red: #DC3545;
+      --yellow: #FFC107;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #F0F2F5;
+      color: var(--text);
+      padding: 32px 24px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--aws-dark);
+    }
+
+    header p {
+      color: var(--sub);
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--green);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── LAYER WRAPPER ── */
+    .layer {
+      position: relative;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: var(--layer-bg);
+      margin-bottom: 16px;
+      padding: 16px 20px 20px;
+    }
+
+    .layer-label {
+      position: absolute;
+      top: -12px;
+      left: 20px;
+      background: var(--aws-dark);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 12px;
+      border-radius: 20px;
+    }
+
+    /* ── CARDS ROW ── */
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 10px;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 16px 14px;
+      min-width: 150px;
+      flex: 1 1 150px;
+      max-width: 200px;
+      position: relative;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      transition: box-shadow 0.2s, transform 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .card:hover {
+      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+      transform: translateY(-2px);
+    }
+
+    /* card color themes */
+    .card-aws    { background: linear-gradient(145deg, #FFF8EE, #FFF0D0); border-color: #FFBA52; }
+    .card-front  { background: linear-gradient(145deg, #EEF4FF, #D6E8FF); border-color: #7EAAFF; }
+    .card-svc    { background: linear-gradient(145deg, #EDFBF1, #C9F0D6); border-color: #5DC47A; }
+    .card-auth   { background: linear-gradient(145deg, #F3EEFF, #E0CCFF); border-color: #9B72EB; }
+    .card-worker { background: linear-gradient(145deg, #E8FBFC, #C2EFF3); border-color: #4DC3CC; }
+    .card-data   { background: linear-gradient(145deg, #EEF4FF, #D0DFFF); border-color: #5A8DEE; }
+    .card-cache  { background: linear-gradient(145deg, #FFF0F0, #FFD6D6); border-color: #F06B6B; }
+    .card-pay    { background: linear-gradient(145deg, #F5EEFF, #E8D5FF); border-color: #A87EEB; }
+    .card-devops { background: linear-gradient(145deg, #F0F2F5, #DDE2EA); border-color: #8898AA; }
+    .card-alb    { background: linear-gradient(145deg, #FFF5E0, #FFE5A0); border-color: #FF9900; }
+
+    .card-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .card-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--aws-dark);
+      margin-bottom: 4px;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: #4A5568;
+      line-height: 1.45;
+      flex: 1;
+    }
+
+    .card-badge {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+      color: #fff;
+    }
+
+    .bg-orange  { background: var(--aws-orange); color: #fff; border-color: var(--aws-orange); }
+    .bg-blue    { background: var(--aws-blue);   color: #fff; border-color: var(--aws-blue);   }
+    .bg-green   { background: var(--green);       color: #fff; border-color: var(--green);       }
+    .bg-purple  { background: var(--purple);      color: #fff; border-color: var(--purple);      }
+    .bg-teal    { background: var(--teal);        color: #fff; border-color: var(--teal);        }
+    .bg-red     { background: var(--red);         color: #fff; border-color: var(--red);         }
+    .bg-yellow  { background: var(--yellow);      color: #333; border-color: var(--yellow);      }
+    .bg-dark    { background: var(--aws-dark);    color: #fff; border-color: var(--aws-dark);    }
+
+    /* NEW badge for ALB */
+    .new-badge {
+      position: absolute;
+      top: -8px;
+      right: 10px;
+      background: var(--red);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── ARROWS between layers ── */
+    .arrow {
+      text-align: center;
+      font-size: 22px;
+      color: var(--sub);
+      margin: 2px 0;
+      line-height: 1;
+    }
+
+    .arrow-label {
+      font-size: 10px;
+      color: var(--sub);
+      margin-top: -2px;
+      margin-bottom: 4px;
+    }
+
+    /* ── NOTES panel ── */
+    .notes {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 12.5px;
+      line-height: 1.7;
+    }
+
+    .notes h3 {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--aws-dark);
+    }
+
+    .notes ul {
+      padding-left: 20px;
+    }
+
+    .notes li { margin-bottom: 4px; }
+
+    /* ── CHANGE HIGHLIGHT ── */
+    .change-note {
+      background: #FFF3CD;
+      border: 1.5px solid var(--yellow);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 12px;
+      margin-bottom: 16px;
+      color: #856404;
+    }
+
+    .change-note strong { color: #533F03; }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--sub);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* ── FLOW PATHS ── */
+    .flow-section {
+      margin-top: 28px;
+    }
+
+    .flow-section h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--aws-dark);
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .flow-card {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 12.5px;
+    }
+
+    .flow-card h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      color: var(--aws-dark);
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 5px;
+      line-height: 1.5;
+    }
+
+    .step-num {
+      background: var(--aws-dark);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 11px;
+      color: var(--sub);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Memesy — Production Architecture</h1>
+  <p>DevOps Interview · C2C Meme Marketplace · Full Stack Full-Prod</p>
+  <span class="badge">✓ PRODUCTION READY</span>
+</header>
+
+
+<!-- ── CLIENT ── -->
+<div class="layer">
+  <span class="layer-label">Client</span>
+  <div class="cards">
+    <div class="card card-front">
+      <div class="card-icon">⚛️</div>
+      <div class="card-name">React + TypeScript</div>
+      <div class="card-sub">SPA compiled to static files. Hosted on S3, served via CloudFront. No runtime server.</div>
+      <span class="card-badge bg-blue">Frontend</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+<div class="arrow-label">HTTPS requests</div>
+
+<!-- ── EDGE ── -->
+<div class="layer">
+  <span class="layer-label">Edge / CDN</span>
+  <div class="cards">
+    <div class="card card-aws">
+      <div class="card-icon">🌐</div>
+      <div class="card-name">CloudFront + WAF</div>
+      <div class="card-sub">CDN for low-latency US delivery. WAF blocks DDoS, bots, and malicious requests at the edge.</div>
+      <span class="card-badge bg-orange">AWS Managed</span>
+    </div>
+    <div class="card card-aws">
+      <div class="card-icon">🪣</div>
+      <div class="card-name">S3</div>
+      <div class="card-sub">Hosts React static files and all meme media assets. Raw bucket never public.</div>
+      <span class="card-badge bg-orange">AWS Managed</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+<div class="arrow-label">Dynamic API requests only</div>
+
+<!-- ── LOAD BALANCER — CHANGED ── -->
+<div class="layer">
+  <span class="layer-label">Load Balancer</span>
+  <div class="cards">
+    <div class="card card-alb" style="border-color: var(--aws-orange);">
+<div class="card-icon">⚖️</div>
+      <div class="card-name">AWS ALB</div>
+      <div class="card-sub">
+        Application Load Balancer. Fully managed. Path-based routing to ECS target groups
+        (<code>/api/listings/*</code>, <code>/api/orders/*</code>, <code>/api/payments/*</code>).
+        Native health checks, TLS termination, auto-scaling triggers. No single point of failure.
+      </div>
+      <span class="card-badge bg-orange">AWS Managed</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="arrow">↓</div>
+<div class="arrow-label">Routed to target ECS service</div>
+
+<!-- ── BACKEND ── -->
+<div class="layer">
+  <span class="layer-label">Backend · ECS Fargate</span>
+  <div class="cards">
+    <div class="card card-svc">
+      <div class="card-icon">🐍</div>
+      <div class="card-name">Flask — Listing</div>
+      <div class="card-sub">Browse, search, post meme listings. Reads Redis cache first, falls back to PostgreSQL.</div>
+      <span class="card-badge bg-green">Service</span>
+    </div>
+    <div class="card card-svc">
+      <div class="card-icon">🐍</div>
+      <div class="card-name">Flask — Order</div>
+      <div class="card-sub">Manages buyer orders, purchase history, order state transitions.</div>
+      <span class="card-badge bg-green">Service</span>
+    </div>
+    <div class="card card-svc">
+      <div class="card-icon">🐍</div>
+      <div class="card-name">Flask — Payment</div>
+      <div class="card-sub">Initiates Stripe checkout, receives webhooks, publishes events to SQS.</div>
+      <span class="card-badge bg-green">Service</span>
+    </div>
+    <div class="card card-auth">
+      <div class="card-icon">🔑</div>
+      <div class="card-name">JWT Auth</div>
+      <div class="card-sub">Email/password login issues JWT. Sessions stored in Redis for per-request validation.</div>
+      <span class="card-badge bg-purple">Auth</span>
+    </div>
+    <div class="card card-worker">
+      <div class="card-icon">🌿</div>
+      <div class="card-name">Celery</div>
+      <div class="card-sub">Background tasks: thumbnail gen, metadata extraction, cache invalidation, seller notifications.</div>
+      <span class="card-badge bg-teal">Workers</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+<div class="arrow-label">Reads / writes</div>
+
+<!-- ── DATA ── -->
+<div class="layer">
+  <span class="layer-label">Data</span>
+  <div class="cards">
+    <div class="card card-data">
+      <div class="card-icon">🐘</div>
+      <div class="card-name">PostgreSQL</div>
+      <div class="card-sub">RDS Multi-AZ. Primary store for users, listings, orders. JSONB for flexible listing attributes.</div>
+      <span class="card-badge bg-blue">RDS</span>
+    </div>
+    <div class="card card-cache">
+      <div class="card-icon">🔴</div>
+      <div class="card-name">Redis</div>
+      <div class="card-sub">ElastiCache. Hot listing cache, JWT session store, Celery task broker.</div>
+      <span class="card-badge bg-red">ElastiCache</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+<div class="arrow-label">Async events on payment success</div>
+
+<!-- ── ASYNC ── -->
+<div class="layer">
+  <span class="layer-label">Async / Events</span>
+  <div class="cards">
+    <div class="card card-aws">
+      <div class="card-icon">📨</div>
+      <div class="card-name">SQS + DLQ</div>
+      <div class="card-sub">Guaranteed delivery for purchase events. DLQ captures failures after max retries.</div>
+      <span class="card-badge bg-orange">AWS Managed</span>
+    </div>
+    <div class="card card-aws">
+      <div class="card-icon">⚡</div>
+      <div class="card-name">Lambda</div>
+      <div class="card-sub">Generates buyer-scoped CloudFront signed URLs per asset. Triggered by SQS.</div>
+      <span class="card-badge bg-orange">AWS Managed</span>
+    </div>
+    <div class="card card-pay">
+      <div class="card-icon">💳</div>
+      <div class="card-name">Stripe</div>
+      <div class="card-sub">Multi-item Payment Intents. Webhook fires on success → SQS publish.</div>
+      <span class="card-badge bg-purple">Payments</span>
+    </div>
+    <div class="card card-aws">
+      <div class="card-icon">📧</div>
+      <div class="card-name">SES</div>
+      <div class="card-sub">Emails buyer access links and seller sale confirmations.</div>
+      <span class="card-badge bg-orange">AWS Managed</span>
+    </div>
+  </div>
+</div>
+
+<div class="arrow">↓</div>
+<div class="arrow-label">Infrastructure as code / CI-CD</div>
+
+<!-- ── DEVOPS ── -->
+<div class="layer">
+  <span class="layer-label">DevOps / IaC</span>
+  <div class="cards">
+    <div class="card card-devops">
+      <div class="card-icon">🐙</div>
+      <div class="card-name">GitHub Actions</div>
+      <div class="card-sub">CI/CD pipeline — build, test, push Docker image, deploy to ECS on merge to main.</div>
+      <span class="card-badge bg-dark">CI/CD</span>
+    </div>
+    <div class="card card-devops">
+      <div class="card-icon">🐳</div>
+      <div class="card-name">Docker</div>
+      <div class="card-sub">All Flask services containerized. Image pushed to ECR.</div>
+      <span class="card-badge bg-blue">Container</span>
+    </div>
+    <div class="card card-devops">
+      <div class="card-icon">🏗️</div>
+      <div class="card-name">Terraform</div>
+      <div class="card-sub">All AWS infra as code — VPC, ALB, ECS, RDS, ElastiCache, SQS, IAM. Reproducible envs.</div>
+      <span class="card-badge bg-purple">IaC</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── FLOW PATHS ── -->
+<div class="flow-section">
+  <h2>Data Flows</h2>
+  <div class="flow-grid">
+
+    <div class="flow-card">
+      <h4>🔐 Auth Flow</h4>
+      <div class="flow-step"><span class="step-num">1</span>Browser → CloudFront → ALB</div>
+      <div class="flow-step"><span class="step-num">2</span>ALB routes <code>POST /api/auth/login</code> → Flask (auth target group)</div>
+      <div class="flow-step"><span class="step-num">3</span>Flask validates creds → PostgreSQL</div>
+      <div class="flow-step"><span class="step-num">4</span>JWT issued, session stored in Redis</div>
+    </div>
+
+    <div class="flow-card">
+      <h4>📋 Browse Flow</h4>
+      <div class="flow-step"><span class="step-num">1</span>Browser → CloudFront → ALB</div>
+      <div class="flow-step"><span class="step-num">2</span>ALB → Flask (listing target group)</div>
+      <div class="flow-step"><span class="step-num">3</span>Redis cache hit → return instantly</div>
+      <div class="flow-step"><span class="step-num">4</span>Cache miss → PostgreSQL → cache → return</div>
+    </div>
+
+    <div class="flow-card">
+      <h4>📤 Seller Upload Flow</h4>
+      <div class="flow-step"><span class="step-num">1</span>Flask (listing) saves metadata → PostgreSQL</div>
+      <div class="flow-step"><span class="step-num">2</span>Media uploaded → S3</div>
+      <div class="flow-step"><span class="step-num">3</span>Celery: thumbnail gen, metadata extract</div>
+      <div class="flow-step"><span class="step-num">4</span>Celery invalidates Redis cache</div>
+    </div>
+
+    <div class="flow-card">
+      <h4>💰 Purchase Flow</h4>
+      <div class="flow-step"><span class="step-num">1</span>ALB → Flask (payment) → Stripe checkout</div>
+      <div class="flow-step"><span class="step-num">2</span>Stripe webhook → Flask publishes → SQS</div>
+      <div class="flow-step"><span class="step-num">3</span>Lambda generates signed CloudFront URL per asset</div>
+      <div class="flow-step"><span class="step-num">4</span>SES emails buyer access links</div>
+      <div class="flow-step"><span class="step-num">5</span>Celery updates seller record, sends sale email</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <strong>Legend:</strong>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--aws-orange)"></div> AWS Managed Service</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Flask Microservice</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Data Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Auth / Payments</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--aws-dark)"></div> DevOps / IaC</div>
+</div>
+
+<footer>
+  Memesy Production Stack Proposal &nbsp;·&nbsp; DevOps Interview &nbsp;·&nbsp; Region: us-east-1
+</footer>
+
+</div>
+</body>
+</html>
