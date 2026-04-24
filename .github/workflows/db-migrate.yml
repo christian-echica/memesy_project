@@ -1,0 +1,67 @@
+name: DB Migrate / Seed
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: Script to run inside the container
+        required: true
+        default: db/seed.py
+        type: choice
+        options:
+          - db/seed.py
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  migrate:
+    name: Run ${{ inputs.script }} via ECS run-task
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run one-off ECS task
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster memesy-prod-cluster \
+            --task-definition memesy-prod-listing \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0a6207929369db8ae,subnet-0cb67cec7050d0d33],securityGroups=[sg-050b0397231967f45],assignPublicIp=DISABLED}" \
+            --overrides '{"containerOverrides":[{"name":"listing","command":["python","${{ inputs.script }}"]}]}' \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Task ARN: $TASK_ARN"
+          echo "TASK_ARN=$TASK_ARN" >> $GITHUB_ENV
+
+      - name: Wait for task to complete
+        run: |
+          echo "Waiting for task to stop…"
+          aws ecs wait tasks-stopped \
+            --cluster memesy-prod-cluster \
+            --tasks "$TASK_ARN"
+
+      - name: Check exit code
+        run: |
+          EXIT=$(aws ecs describe-tasks \
+            --cluster memesy-prod-cluster \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+          echo "Container exit code: $EXIT"
+          if [ "$EXIT" != "0" ]; then
+            echo "Task failed with exit code $EXIT"
+            exit 1
+          fi
+          echo "Seed completed successfully."

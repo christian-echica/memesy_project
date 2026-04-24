@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -10,7 +11,7 @@ interface Listing {
 }
 
 export default function ListingsPage() {
-  const { logout } = useAuth();
+  const { token, logout } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,12 +31,21 @@ export default function ListingsPage() {
           <span className="text-2xl">😂</span>
           <span className="text-xl font-bold text-gray-900">Memesy</span>
         </div>
-        <button
-          onClick={logout}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
-        >
-          Log out
-        </button>
+        {token ? (
+          <button
+            onClick={logout}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+          >
+            Log out
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition"
+          >
+            Log in
+          </Link>
+        )}
       </nav>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
@@ -71,9 +81,18 @@ export default function ListingsPage() {
                 <p className="mt-1 text-violet-600 font-bold">
                   ${(l.price_cents / 100).toFixed(2)}
                 </p>
-                <button className="mt-3 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition">
-                  Buy
-                </button>
+                {token ? (
+                  <button className="mt-3 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition">
+                    Buy
+                  </button>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="mt-3 block w-full rounded-lg border border-violet-300 px-4 py-2 text-sm font-semibold text-violet-600 text-center hover:bg-violet-50 transition"
+                  >
+                    Log in to buy
+                  </Link>
+                )}
               </div>
             </div>
           ))}

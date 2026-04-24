@@ -232,6 +232,24 @@ resource "aws_iam_role_policy" "github_actions" {
         ]
       },
       {
+        Sid    = "ECSRunTask"
+        Effect = "Allow"
+        Action = ["ecs:RunTask", "ecs:DescribeTasks", "ecs:StopTask"]
+        Resource = [
+          "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:task-definition/${var.project}-${var.env}-listing:*",
+          "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:task/*"
+        ]
+      },
+      {
+        Sid    = "IAMPassRoleForECS"
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project}-${var.env}-ecs-execution",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project}-${var.env}-ecs-task"
+        ]
+      },
+      {
         Sid    = "LambdaDeploy"
         Effect = "Allow"
         Action = ["lambda:UpdateFunctionCode", "lambda:GetFunction"]

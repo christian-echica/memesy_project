@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Shared library used by all services
 COPY shared/ ./shared/
 
+# DB migration + seed scripts (used by one-off ECS run-task)
+COPY db/ ./db/
+
 # Service source
 COPY listing/ .
 
