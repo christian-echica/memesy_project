@@ -153,7 +153,8 @@ locals {
     { name = "REDIS_AUTH_TOKEN",  valueFrom = var.redis_auth_token_ssm_arn },
   ]
   payment_extra_secrets = [
-    { name = "STRIPE_SECRET_KEY", valueFrom = var.stripe_secret_key_ssm_arn },
+    { name = "STRIPE_SECRET_KEY",    valueFrom = var.stripe_secret_key_ssm_arn },
+    { name = "STRIPE_WEBHOOK_SECRET", valueFrom = var.stripe_webhook_secret_ssm_arn },
   ]
 }
 
