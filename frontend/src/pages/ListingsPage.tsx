@@ -23,31 +23,62 @@ export default function ListingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading…</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-
   return (
-    <div style={{ maxWidth: 900, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1>Browse Memes</h1>
-        <button onClick={logout}>Log out</button>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">😂</span>
+          <span className="text-xl font-bold text-gray-900">Memesy</span>
+        </div>
+        <button
+          onClick={logout}
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+        >
+          Log out
+        </button>
+      </nav>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-        {listings.map((l) => (
-          <div key={l.id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
-            <img
-              src={l.preview_url}
-              alt={l.title}
-              style={{ width: "100%", aspectRatio: "1", objectFit: "cover" }}
-            />
-            <h3 style={{ margin: "8px 0 4px" }}>{l.title}</h3>
-            <p style={{ margin: 0, color: "#555" }}>
-              ${(l.price_cents / 100).toFixed(2)}
-            </p>
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Browse Memes</h2>
+
+        {loading && (
+          <div className="flex justify-center items-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
           </div>
-        ))}
-      </div>
+        )}
+
+        {error && (
+          <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{error}</p>
+        )}
+
+        {!loading && !error && listings.length === 0 && (
+          <p className="text-center text-gray-400 py-20">No listings yet.</p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {listings.map((l) => (
+            <div
+              key={l.id}
+              className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
+            >
+              <img
+                src={l.preview_url}
+                alt={l.title}
+                className="w-full aspect-square object-cover"
+              />
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-900 truncate">{l.title}</h3>
+                <p className="mt-1 text-violet-600 font-bold">
+                  ${(l.price_cents / 100).toFixed(2)}
+                </p>
+                <button className="mt-3 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition">
+                  Buy
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
 }
