@@ -18,11 +18,9 @@ interface Props {
 }
 
 function PaymentForm({
-  clientSecret,
   totalCents,
   onClose,
 }: {
-  clientSecret: string;
   totalCents: number;
   onClose: () => void;
 }) {
@@ -140,7 +138,6 @@ export default function CheckoutModal({ listing, onClose }: Props) {
         {clientSecret && (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <PaymentForm
-              clientSecret={clientSecret}
               totalCents={totalCents}
               onClose={onClose}
             />
