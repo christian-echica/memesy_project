@@ -56,6 +56,7 @@ module "iam" {
   sqs_queue_arn             = local.sqs_queue_arn
   db_password_ssm_arn       = module.data.db_password_ssm_arn
   redis_auth_token_ssm_arn  = module.data.redis_auth_token_ssm_arn
+  stripe_secret_key_ssm_arn = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/memesy/prod/stripe-secret-key"
   github_org             = var.github_org
   github_repo            = var.github_repo
   lambda_package_bucket  = var.lambda_package_s3_bucket
@@ -97,6 +98,7 @@ module "compute" {
   redis_endpoint             = module.data.redis_endpoint
   redis_port                 = module.data.redis_port
   redis_auth_token_ssm_arn   = module.data.redis_auth_token_ssm_arn
+  stripe_secret_key_ssm_arn  = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/memesy/prod/stripe-secret-key"
   media_bucket_id       = module.storage.media_bucket_id
   sqs_queue_url         = local.sqs_queue_url
   cpu                   = var.ecs_cpu

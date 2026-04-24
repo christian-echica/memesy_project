@@ -39,7 +39,7 @@ resource "aws_iam_role_policy" "ecs_execution_ssm" {
       Sid      = "SSMSecrets"
       Effect   = "Allow"
       Action   = ["ssm:GetParameters", "ssm:GetParameter"]
-      Resource = [var.db_password_ssm_arn, var.redis_auth_token_ssm_arn]
+      Resource = [var.db_password_ssm_arn, var.redis_auth_token_ssm_arn, var.stripe_secret_key_ssm_arn]
     }]
   })
 }

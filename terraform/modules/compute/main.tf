@@ -152,6 +152,9 @@ locals {
     { name = "DB_PASSWORD",       valueFrom = var.db_password_ssm_arn },
     { name = "REDIS_AUTH_TOKEN",  valueFrom = var.redis_auth_token_ssm_arn },
   ]
+  payment_extra_secrets = [
+    { name = "STRIPE_SECRET_KEY", valueFrom = var.stripe_secret_key_ssm_arn },
+  ]
 }
 
 resource "aws_ecs_task_definition" "this" {
@@ -173,7 +176,7 @@ resource "aws_ecs_task_definition" "this" {
       protocol      = "tcp"
     }]
     environment = local.common_env
-    secrets     = local.common_secrets
+    secrets     = concat(local.common_secrets, each.key == "payment" ? local.payment_extra_secrets : [])
     logConfiguration = {
       logDriver = "awslogs"
       options = {
