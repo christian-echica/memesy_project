@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import CheckoutModal from "../components/CheckoutModal";
 
 interface Listing {
   id: number;
@@ -15,6 +16,7 @@ export default function ListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [buying, setBuying] = useState<Listing | null>(null);
 
   useEffect(() => {
     api
@@ -82,7 +84,10 @@ export default function ListingsPage() {
                   ${(l.price_cents / 100).toFixed(2)}
                 </p>
                 {token ? (
-                  <button className="mt-3 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition">
+                  <button
+                    onClick={() => setBuying(l)}
+                    className="mt-3 w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition"
+                  >
                     Buy
                   </button>
                 ) : (
@@ -98,6 +103,10 @@ export default function ListingsPage() {
           ))}
         </div>
       </main>
+
+      {buying && (
+        <CheckoutModal listing={buying} onClose={() => setBuying(null)} />
+      )}
     </div>
   );
 }
