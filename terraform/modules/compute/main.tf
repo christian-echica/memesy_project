@@ -149,7 +149,8 @@ locals {
     { name = "SQS_QUEUE_URL", value = var.sqs_queue_url },
   ]
   common_secrets = [
-    { name = "DB_PASSWORD", valueFrom = var.db_password_ssm_arn }
+    { name = "DB_PASSWORD",       valueFrom = var.db_password_ssm_arn },
+    { name = "REDIS_AUTH_TOKEN",  valueFrom = var.redis_auth_token_ssm_arn },
   ]
 }
 

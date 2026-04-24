@@ -2,7 +2,8 @@ variable "project"             { type = string }
 variable "env"                 { type = string }
 variable "media_bucket_arn"    { type = string }
 variable "sqs_queue_arn"       { type = string }
-variable "db_password_ssm_arn" { type = string }
+variable "db_password_ssm_arn"       { type = string }
+variable "redis_auth_token_ssm_arn"  { type = string }
 
 variable "github_org" {
   type        = string

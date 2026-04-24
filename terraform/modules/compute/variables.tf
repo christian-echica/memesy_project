@@ -11,8 +11,9 @@ variable "db_endpoint"            { type = string }
 variable "db_name"                { type = string }
 variable "db_username"            { type = string }
 variable "db_password_ssm_arn"    { type = string }
-variable "redis_endpoint"         { type = string }
-variable "redis_port"             { type = number }
+variable "redis_endpoint"              { type = string }
+variable "redis_port"                 { type = number }
+variable "redis_auth_token_ssm_arn"   { type = string }
 variable "media_bucket_id"        { type = string }
 variable "sqs_queue_url"          { type = string }
 
