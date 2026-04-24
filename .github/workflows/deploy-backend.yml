@@ -24,6 +24,8 @@ permissions:
 env:
   AWS_REGION: us-east-1
   ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  # AWS resources are named with short env slugs (prod/dev), not GitHub environment names (production/dev)
+  AWS_ENV: ${{ inputs.environment == 'production' && 'prod' || inputs.environment }}
 
 jobs:
   # ── ECS Fargate microservices ──────────────────────────────────────────────
@@ -51,7 +53,7 @@ jobs:
 
       - name: Build & push
         env:
-          IMAGE: ${{ env.ECR_REGISTRY }}/memesy-${{ inputs.environment }}/${{ matrix.service }}
+          IMAGE: ${{ env.ECR_REGISTRY }}/memesy-${{ env.AWS_ENV }}/${{ matrix.service }}
           SHA: ${{ github.sha }}
         run: |
           docker build \
@@ -66,7 +68,7 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --service memesy-${{ inputs.environment }}-${{ matrix.service }} \
+            --service memesy-${{ env.AWS_ENV }}-${{ matrix.service }} \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}
 
@@ -109,7 +111,7 @@ jobs:
       - name: Update Lambda function
         run: |
           aws lambda update-function-code \
-            --function-name memesy-${{ inputs.environment }}-purchase-handler \
+            --function-name memesy-${{ env.AWS_ENV }}-purchase-handler \
             --s3-bucket ${{ secrets.LAMBDA_PACKAGE_BUCKET }} \
             --s3-key purchase-handler/latest.zip \
             --region ${{ env.AWS_REGION }}

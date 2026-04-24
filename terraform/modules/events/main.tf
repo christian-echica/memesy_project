@@ -87,6 +87,17 @@ resource "aws_ses_domain_dkim" "this" {
   domain = aws_ses_domain_identity.this.domain
 }
 
+# ── SES DKIM Route 53 Records ─────────────────────────────────────────────────
+
+resource "aws_route53_record" "dkim" {
+  count   = var.route53_zone_id != "" ? 3 : 0
+  zone_id = var.route53_zone_id
+  name    = "${aws_ses_domain_dkim.this.dkim_tokens[count.index]}._domainkey.${var.ses_domain}"
+  type    = "CNAME"
+  ttl     = 300
+  records = ["${aws_ses_domain_dkim.this.dkim_tokens[count.index]}.dkim.amazonses.com"]
+}
+
 # ── DLQ Depth Alarm ───────────────────────────────────────────────────────────
 # Any message landing in the DLQ means Lambda failed 3 consecutive attempts —
 # alert immediately so no purchase event is silently lost.

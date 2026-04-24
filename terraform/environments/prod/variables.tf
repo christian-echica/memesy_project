@@ -74,12 +74,12 @@ variable "ecs_memory" {
 
 variable "ses_domain" {
   type    = string
-  default = "memesy.com"
+  default = "christianechica.com"
 }
 
 variable "ses_sender_email" {
   type    = string
-  default = "noreply@memesy.com"
+  default = "noreply@christianechica.com"
 }
 
 variable "lambda_package_s3_bucket" {

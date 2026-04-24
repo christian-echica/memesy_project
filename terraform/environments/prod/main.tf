@@ -10,6 +10,10 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
+data "aws_route53_zone" "ses" {
+  name         = var.ses_domain
+  private_zone = false
+}
 
 locals {
   # Computed ahead of module calls so both iam and compute get the ARN
@@ -130,5 +134,6 @@ module "events" {
   ses_sender_email         = var.ses_sender_email
   lambda_package_s3_bucket = var.lambda_package_s3_bucket
   lambda_package_s3_key    = var.lambda_package_s3_key
+  route53_zone_id          = data.aws_route53_zone.ses.zone_id
   tags                     = var.tags
 }

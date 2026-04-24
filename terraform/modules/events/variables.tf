@@ -11,6 +11,12 @@ variable "ses_sender_email"          { type = string }
 variable "lambda_package_s3_bucket"  { type = string }
 variable "lambda_package_s3_key"     { type = string }
 
+variable "route53_zone_id" {
+  type        = string
+  default     = ""
+  description = "Route 53 hosted zone ID for the SES domain. When set, DKIM CNAME records are created automatically."
+}
+
 variable "dlq_alarm_sns_arn" {
   type        = string
   default     = ""
