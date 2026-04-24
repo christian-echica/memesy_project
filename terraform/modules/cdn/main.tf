@@ -3,6 +3,54 @@ locals {
   tags = merge(var.tags, { Module = "cdn" })
 }
 
+# ── ACM Certificate for custom domain ────────────────────────────────────────
+
+resource "aws_acm_certificate" "frontend" {
+  count             = var.app_domain != "" ? 1 : 0
+  domain_name       = var.app_domain
+  validation_method = "DNS"
+  tags              = local.tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "cert_validation" {
+  for_each = var.app_domain != "" ? {
+    for dvo in aws_acm_certificate.frontend[0].domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      type   = dvo.resource_record_type
+      record = dvo.resource_record_value
+    }
+  } : {}
+
+  zone_id = var.route53_zone_id
+  name    = each.value.name
+  type    = each.value.type
+  ttl     = 60
+  records = [each.value.record]
+}
+
+resource "aws_acm_certificate_validation" "frontend" {
+  count                   = var.app_domain != "" ? 1 : 0
+  certificate_arn         = aws_acm_certificate.frontend[0].arn
+  validation_record_fqdns = [for r in aws_route53_record.cert_validation : r.fqdn]
+}
+
+resource "aws_route53_record" "app" {
+  count   = var.app_domain != "" ? 1 : 0
+  zone_id = var.route53_zone_id
+  name    = var.app_domain
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.frontend.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
 # ── WAF Web ACL (CLOUDFRONT scope must be us-east-1) ─────────────────────────
 
 resource "aws_wafv2_web_acl" "this" {
@@ -102,6 +150,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   default_root_object = "index.html"
   web_acl_id          = aws_wafv2_web_acl.this.arn
   price_class         = "PriceClass_100"
+  aliases             = var.app_domain != "" ? [var.app_domain] : []
 
   # S3 origin: React static files
   origin {
@@ -177,7 +226,10 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.app_domain == "" ? true : null
+    acm_certificate_arn            = var.app_domain != "" ? aws_acm_certificate_validation.frontend[0].certificate_arn : null
+    ssl_support_method             = var.app_domain != "" ? "sni-only" : null
+    minimum_protocol_version       = var.app_domain != "" ? "TLSv1.2_2021" : null
   }
 
   tags = merge(local.tags, { Name = "${local.name}-cf-frontend" })

@@ -115,6 +115,8 @@ module "cdn" {
   media_bucket_id           = module.storage.media_bucket_id
   alb_dns_name              = module.compute.alb_dns_name
   cloudfront_public_key_pem = var.cloudfront_public_key_pem
+  app_domain                = var.app_domain
+  route53_zone_id           = data.aws_route53_zone.ses.zone_id
   tags                      = var.tags
 }
 

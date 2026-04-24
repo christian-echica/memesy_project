@@ -72,6 +72,11 @@ variable "ecs_memory" {
 
 # ── Events & Messaging ────────────────────────────────────────────────────────
 
+variable "app_domain" {
+  type    = string
+  default = ""
+}
+
 variable "ses_domain" {
   type    = string
   default = "christianechica.com"
